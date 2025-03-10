@@ -269,15 +269,14 @@ def main():
     msg_position = master.recv_match(type="GLOBAL_POSITION_INT", blocking=True, timeout=5)
     msg_attitude = master.recv_match(type="ATTITUDE", blocking=True, timeout=5)
 
-    if msg_position and msg_attitude:
-        # 经纬度（单位转换：MAVLink 发送的是 E7，需除以 1e7）
-        lat = msg_position.lat / 1e7
-        lon = msg_position.lon / 1e7
-        alt = msg_position.relative_alt / 1000  # 转换为米
 
-        yaw = math.degrees(msg_attitude.yaw)
-        pitch = math.degrees(msg_attitude.pitch)
-        roll = math.degrees(msg_attitude.roll) #Yaw angle (-pi..+pi)
+    lat = msg_position.lat / 1e7
+    lon = msg_position.lon / 1e7
+    alt = msg_position.relative_alt / 1000  # 转换为米
+
+    yaw = math.degrees(msg_attitude.yaw)
+    pitch = math.degrees(msg_attitude.pitch)
+    roll = math.degrees(msg_attitude.roll) #Yaw angle (-pi..+pi)
     print(f"Latitude: {lat:.7f}, Longitude: {lon:.7f}, Altitude: {alt:.2f}m")
     print(f"Yaw: {yaw:.2f}°, Pitch: {pitch:.2f}°, Roll: {roll:.2f}°")
     time.sleep(5)
