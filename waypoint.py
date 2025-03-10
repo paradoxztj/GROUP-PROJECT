@@ -14,8 +14,6 @@ waypoints_phase1 = [
     (51.4235487, -2.6710046),  # 到达后停留5秒
 ]
 
-# 第二阶段：降落点
-land_latlon = (51.4234772, -2.6711175)
 
 waypoints_phase3 = [
     (51.4236057, -2.6707265),
@@ -271,6 +269,8 @@ def main():
         print("mode switch fail")
     time.sleep(2)
 
+    #Rhino Location
+    land_latlon = (51.4234772, -2.6711175)
     lat2, lon2 = land_latlon
     master.mav.set_position_target_global_int_send(
         0,  # 时间戳（0=立即执行）
