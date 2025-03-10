@@ -1,6 +1,6 @@
 from pymavlink import mavutil
 import time
-
+import math
 
 connection_str = 'tcp:127.0.0.1:14550'
 
@@ -24,9 +24,8 @@ waypoints_phase3 = [
     (51.4233900, -2.6715231),
 ]
 
-takeoff_alt = 30   
-acceptance_radius = 2 
-hold_time = 5     
+takeoff_alt = 30
+acceptance_radius = 2
 
 def upload_first_6_waypoints(master):
     """上传前 7 个航点，并设置起飞和停留逻辑。"""
@@ -55,7 +54,7 @@ def upload_first_6_waypoints(master):
         if req_seq == 0:
             command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
             param1 = 0
-            param2 = 0
+            param2 = acceptance_radius
             param3 = 0
             param4 = 0
             altitude = takeoff_alt
@@ -64,9 +63,9 @@ def upload_first_6_waypoints(master):
             # 普通航点
             command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
             altitude = takeoff_alt
-            param1 = 0
             if req_seq in [5]:
-                param1 = hold_time   # 第6点停留5秒
+                altitude = 40
+            param1 = 0
             param2 = acceptance_radius
             param3 = 0
             param4 = 0
@@ -101,7 +100,7 @@ def upload_first_6_waypoints(master):
 
 
 def wait_until_mission_finished(master, last_seq):
-    print(f"Waiting until mission item seq={last_seq} is reached...")
+    print(f"Waiting until waypoint is reached...")
     while True:
         msg = master.recv_match(blocking=True)
         if not msg:
@@ -136,10 +135,10 @@ def upload_third_6_waypoints(master):
 
         if req_seq == 0:
             command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
-            param1 = 0    
-            param2 = 0    
+            param1 = 0
+            param2 = acceptance_radius
             param3 = 0
-            param4 = 0    
+            param4 = 0
             altitude = takeoff_alt
             autocontinue = 1
         else:
@@ -232,14 +231,6 @@ def main():
 
     # 4. 等待直到第6个航点执行完（索引=5）
     wait_until_mission_finished(master, last_seq=5)
-    msg = master.recv_match(type="GPS_RAW_INT", blocking=True)
-    if msg:
-        cog = msg.cog / 100.0  # COG 以 0.01 度为单位，需要转换
-        print(f"GPS direction: {cog}°")
-    print("mission finished")
-
-    # -----------------------------
-    # 阶段2：上传一个降落航点 + 执行
 
     mode = 'GUIDED'
     mode_id = master.mode_mapping().get(mode)
@@ -249,6 +240,47 @@ def main():
     else:
         print("mode switch fail")
     time.sleep(2)
+
+    master.mav.command_long_send(
+        master.target_system,
+        master.target_component,
+        mavutil.mavlink.MAV_CMD_CONDITION_YAW,
+        0,
+        0,   # 目标朝向 0
+        30,   # 旋转速度（度/秒）
+        1,    # 顺时针 (1) / 逆时针 (0)
+        0,    # 停留时间（不需要）
+        0, 0, 0  # 其他参数留空
+    )
+
+    while True:
+        attitude_msg = master.recv_match(type="ATTITUDE", blocking=True, timeout=5)
+        if attitude_msg:
+            current_yaw = math.degrees(attitude_msg.yaw)
+            if abs(current_yaw - 0) < 1:
+                print("Yaw angle aligned to target")
+                break
+    time.sleep(5)
+
+    print("first stage mission finished")
+
+    # -----------------------------
+    # 阶段2：上传一个降落航点 + 执行
+    msg_position = master.recv_match(type="GLOBAL_POSITION_INT", blocking=True, timeout=5)
+    msg_attitude = master.recv_match(type="ATTITUDE", blocking=True, timeout=5)
+
+    if msg_position and msg_attitude:
+        # 经纬度（单位转换：MAVLink 发送的是 E7，需除以 1e7）
+        lat = msg_position.lat / 1e7
+        lon = msg_position.lon / 1e7
+        alt = msg_position.relative_alt / 1000  # 转换为米
+
+        yaw = math.degrees(msg_attitude.yaw)
+        pitch = math.degrees(msg_attitude.pitch)
+        roll = math.degrees(msg_attitude.roll) #Yaw angle (-pi..+pi)
+    print(f"Latitude: {lat:.7f}, Longitude: {lon:.7f}, Altitude: {alt:.2f}m")
+    print(f"Yaw: {yaw:.2f}°, Pitch: {pitch:.2f}°, Roll: {roll:.2f}°")
+    time.sleep(5)
 
     #Rhino Location
     land_latlon = (51.4234772, -2.6711175)
@@ -348,13 +380,13 @@ def main():
         0, 0, 0, 0,  # 不需要额外参数
         0, 0, 0
     )
-    print("🛬 `GUIDED` landing")
+    print("`GUIDED` landing")
 
     while True:
         msg = master.recv_match(type="HEARTBEAT", blocking=True, timeout=5)
         if msg:
             armed = msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED
-            if not armed:  # 如果 `ARMED` 标志消失，说明无人机已 DISARM
+            if not armed:
                 print("landed")
                 break
 
