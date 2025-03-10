@@ -24,10 +24,9 @@ waypoints_phase3 = [
     (51.4233900, -2.6715231),
 ]
 
-takeoff_alt = 30      # 第一段起飞高度
-acceptance_radius = 2 # Waypoint接受半径
-hold_time = 5     # 第6,7航点各停留5秒
-
+takeoff_alt = 30   
+acceptance_radius = 2 
+hold_time = 5     
 
 def upload_first_6_waypoints(master):
     """上传前 7 个航点，并设置起飞和停留逻辑。"""
@@ -51,12 +50,9 @@ def upload_first_6_waypoints(master):
         req_seq = req['seq']
 
         lat, lon = waypoints_phase1[req_seq]
-        # 使用相对高度坐标系
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
-        current = 1 if req_seq == 0 else 0  # 第一个航点标记为 current
-
+        current = 1 if req_seq == 0 else 0
         if req_seq == 0:
-            # 第1航点：起飞
             command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
             param1 = 0
             param2 = 0
@@ -105,35 +101,25 @@ def upload_first_6_waypoints(master):
 
 
 def wait_until_mission_finished(master, last_seq):
-
     print(f"Waiting until mission item seq={last_seq} is reached...")
-
     while True:
         msg = master.recv_match(blocking=True)
         if not msg:
             continue
         mtype = msg.get_type()
-
-
         if mtype == "MISSION_ITEM_REACHED":
             reached_seq = msg.seq
             if reached_seq >= last_seq:
                print(f"Reached the last waypoint ({last_seq}).")
                break
 
-
-
 def upload_third_6_waypoints(master):
-
     count = len(waypoints_phase3)
-
-    # 发送 MISSION_COUNT
     master.mav.mission_count_send(
         master.target_system,
         master.target_component,
         count
     )
-
     seq_uploaded = 0
     while seq_uploaded < count:
         msg = master.recv_match(type=['MISSION_REQUEST_INT', 'MISSION_REQUEST'], blocking=True)
@@ -149,16 +135,14 @@ def upload_third_6_waypoints(master):
         current = 1 if req_seq == 0 else 0  # 第一个航点标记为 current
 
         if req_seq == 0:
-            # 第1航点：起飞
             command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
-            param1 = 0    # 无需等待
-            param2 = 0    # 接受半径（起飞时不太用）
+            param1 = 0    
+            param2 = 0    
             param3 = 0
-            param4 = 0    # 不指定 yaw
+            param4 = 0    
             altitude = takeoff_alt
             autocontinue = 1
         else:
-            # 普通航点
             command = mavutil.mavlink.MAV_CMD_NAV_WAYPOINT
             altitude = takeoff_alt
             param1 = 0
@@ -196,7 +180,6 @@ def upload_third_6_waypoints(master):
 
 
 def main():
-    # 连接
     master = mavutil.mavlink_connection(connection_str)
     master.wait_heartbeat()
     print("Heartbeat OK - system %u component %u" % (master.target_system, master.target_component))
@@ -233,8 +216,6 @@ def main():
             if current_alt >= target_altitude - 1:  # 允许 1m 误差
                 print("reached target altitude")
                 break
-
-
     # -----------------------------
     # 阶段1：上传前6个航点 + 执行
     master.mav.mission_clear_all_send(master.target_system, master.target_component)
