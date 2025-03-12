@@ -264,20 +264,25 @@ def draw_detections(frame, detections):
 
 
 # ========== Analyze image ==========
-def analyze_frame(frame,drone_lat,drone_lon,drone_alt,roll,pitch,yaw):
+def analyze_frame(frame, drone_lat, drone_lon, drone_alt, yaw, polygon):
     results = yolo_model(frame)
     detections = results.xyxy[0].cpu().numpy()
 
     counts = {'zebra': 0, 'rhino': 0, 'elephant': 0}
     gps_locations = {'zebra': [], 'rhino': [], 'elephant': []}
-    object_positions = []  # Used to store GPS coordinates for specific targets (e.g., rhino)
+    object_positions = []  # Stores GPS coordinates of specific targets (e.g., rhinos)
 
     for det in detections:
         x1, y1, x2, y2, conf, cls = det
-        # Get the center point of the detection box
         u = (x1 + x2) / 2
         v = (y1 + y2) / 2
+        roll = 0
+        pitch = 0
         gps_lat, gps_lon = pixel_to_gps(u, v, drone_lat, drone_lon, drone_alt, roll, pitch, yaw)
+        
+        # Check if the detected point is within the designated area
+        if not point_in_polygon((gps_lat, gps_lon), polygon):
+            continue  # Skip processing if outside the area
 
         if int(cls) == 0:
             counts['zebra'] += 1
