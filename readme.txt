@@ -7,6 +7,8 @@ label tool -> labelimg
 
 
 # PS   ----------------------------------------
-61 y镜像
+in GPS_finalversion_test.py
+61  y镜像 dy = y_ratio * (FOV_Y / 2)
+    非镜像 dy = -y_ratio * (FOV_Y / 2)
 
 
