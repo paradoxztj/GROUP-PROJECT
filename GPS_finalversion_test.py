@@ -26,7 +26,7 @@ drone_alt = 100.0         # 高度（单位：米）
 roll = 0.0                # 横滚角（单位：弧度）
 pitch = 0.0               # 俯仰角（单位：弧度）
 angle = 180
-yaw = -radians(angle)         # 偏航角（角度转换为弧度，例如45度）
+yaw = -radians(angle)         # 偏航角（角度转换为弧度，例如180度）
 
 # ========== 像素坐标 → GPS ==========
 import numpy as np
@@ -58,7 +58,7 @@ def pixel_to_gps(u, v, drone_lat, drone_lon, drone_alt, roll, pitch, yaw):
 
     # 将像素比例映射到实际地面距离
     dx = x_ratio * (FOV_X / 2)  # 水平方向偏移（米）
-    dy = -y_ratio * (FOV_Y / 2)  # 垂直方向偏移（米）
+    dy = y_ratio * (FOV_Y / 2)  # 垂直方向偏移（米） Y轴镜像时无负号
 
     # 旋转偏移量，使其与无人机朝向对齐
     R_yaw = np.array([[np.cos(yaw), -np.sin(yaw)],
