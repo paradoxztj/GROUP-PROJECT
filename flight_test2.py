@@ -209,25 +209,36 @@ yolo_model = torch.hub.load('ultralytics/yolov5', 'custom',
 # yaw = radians(angle)      # yaw angle (converted from degrees to radians, e.g., 45°)
 
 # ========== Pixel coordinates → GPS ==========
-def pixel_to_gps(u1, v1, drone_lat, drone_lon, drone_alt, roll, pitch, yaw):
-    fx, fy = K[0, 0], K[1, 1]
-    cx, cy = K[0, 2], K[1, 2]
-    # Normalize image coordinates
-    x = (u1 - cx) / fx
-    y = (v1 - cy) / fy
-    z = 1.0
+# Actual size of camera field of view at 40m altitude
+FOV_X = 33.5  # Horizontal width (meters)
+FOV_Y = 25.0  # Vertical height (meters)
 
-    # Calculate the rotation matrix (note the Euler angles order is zyx)
-    R_total = R.from_euler('zyx', [yaw, pitch, roll]).as_matrix()
-    vec = R_total @ np.array([x, y, z])
-    scale = drone_alt / vec[2]
-    dx = scale * vec[0]
-    dy = scale * vec[1]
+# Image dimensions
+IMG_W = 1456  # Image width (pixels)
+IMG_H = 1088  # Image height (pixels)
 
-    # Convert the drone's GPS coordinates to UTM, add the offset, then convert back to GPS
+def pixel_to_gps(u, v, drone_lat, drone_lon, drone_alt, roll, pitch, yaw):
+    # Calculate relative offset of pixel from image center
+    x_ratio = (u - IMG_W / 2) / (IMG_W / 2)  # Normalize to [-1, 1]
+    y_ratio = (v - IMG_H / 2) / (IMG_H / 2)  # Normalize to [-1, 1]
+
+    # Map pixel ratio to actual ground displacement
+    dx = x_ratio * (FOV_X / 2)  # Horizontal offset (meters)
+    dy = -y_ratio * (FOV_Y / 2)  # Vertical offset (meters)
+
+    # Rotate the offset to align with drone heading
+    R_yaw = np.array([[np.cos(yaw), -np.sin(yaw)],
+                      [np.sin(yaw),  np.cos(yaw)]])
+    offset = R_yaw @ np.array([dx, dy])  # Rotated (dx, dy)
+
+    # Convert drone GPS coordinates to UTM
     utm_x, utm_y, zone, letter = utm.from_latlon(drone_lat, drone_lon)
-    tgt_x = utm_x + dx
-    tgt_y = utm_y + dy
+
+    # Calculate UTM coordinates of target point
+    tgt_x = utm_x + offset[0]
+    tgt_y = utm_y + offset[1]
+
+    # Convert back to GPS coordinates
     tgt_lat, tgt_lon = utm.to_latlon(tgt_x, tgt_y, zone, letter)
 
     return tgt_lat, tgt_lon
