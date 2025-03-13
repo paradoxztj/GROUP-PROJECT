@@ -12,7 +12,11 @@ import time
 
 connection_str = 'tcp:127.0.0.1:14550'
 
+<<<<<<< HEAD
 # 6 个航点坐标（lat, lon），假设高度都设为 30 m
+=======
+# 6 个航点坐标（lat, lon），假设高度都设为 30 m 
+>>>>>>> dd8561ef99682755a3253ec55d613fcdebc597fa
 waypoints_phase1 = [
     (51.4233649, -2.6715177),  # 起飞 -> 30m
     (51.4228247, -2.6711047),
@@ -600,3 +604,7 @@ def main():
 if __name__ == "__main__":
     main()
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> dd8561ef99682755a3253ec55d613fcdebc597fa
