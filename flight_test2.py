@@ -220,6 +220,7 @@ IMG_W = 1456  # Image width (pixels)
 IMG_H = 1088  # Image height (pixels)
 
 def pixel_to_gps(u, v, drone_lat, drone_lon, drone_alt, roll, pitch, yaw):
+    yaw = -yaw
     # Calculate relative offset of pixel from image center
     x_ratio = (u - IMG_W / 2) / (IMG_W / 2)  # Normalize to [-1, 1]
     y_ratio = (v - IMG_H / 2) / (IMG_H / 2)  # Normalize to [-1, 1]
@@ -428,7 +429,7 @@ def main():
     print(f"Yaw: {yaw:.2f}°, Pitch: {pitch:.2f}°, Roll: {roll:.2f}°")
     time.sleep(5)
 
-    # ========== Main program ==========
+    # ========== OpenCV and GPS main ==========
     # Read image (using camera capture here; in actual use, you can replace it with an image file)
 
     drone_lat = lat  # latitude
@@ -462,6 +463,12 @@ def main():
     frame = None
     if image_captured:
         frame = cv2.imread(image_path)
+        
+        frame = cv2.flip(frame, 0)
+        flipped_path = f"flipped_image_{timestamp}.jpg"
+        cv2.imwrite(flipped_path, frame)
+        print(f"Flipped image saved: {flipped_path}")
+
         if frame is None:
             print("Failed to load image.")
         else:
