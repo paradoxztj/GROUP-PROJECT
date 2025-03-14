@@ -10,5 +10,6 @@ label tool -> labelimg
 in GPS_finalversion_test.py
 61  y镜像 dy = y_ratio * (FOV_Y / 2)
     非镜像 dy = -y_ratio * (FOV_Y / 2)
+    偏航角yaw需要取负值
 
 
