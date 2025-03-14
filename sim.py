@@ -219,6 +219,7 @@ IMG_H = 1088  # Image height (pixels)
 
 
 def pixel_to_gps(u, v, drone_lat, drone_lon, drone_alt, roll, pitch, yaw):
+    yaw = -yaw
     # Calculate relative offset of pixel from image center
     x_ratio = (u - IMG_W / 2) / (IMG_W / 2)  # Normalize to [-1, 1]
     y_ratio = (v - IMG_H / 2) / (IMG_H / 2)  # Normalize to [-1, 1]
